@@ -1,14 +1,14 @@
-import {Alert, Button, Image, Row} from 'antd';
-import {CloseOutlined, CheckOutlined} from '@ant-design/icons';
-import {useState} from 'react';
+import {Alert, Row} from 'antd';
 import * as countriesApi from 'i18n-iso-countries';
+import {useState} from 'react';
 
 interface SelectionProps {
     countries: string[];
     order: number[];
+    onSelect: (stat: number) => void 
 }
 
-function Selections({countries, order}: SelectionProps) {
+function Selections({countries, order, onSelect}: SelectionProps) {
     countriesApi.registerLocale(require("i18n-iso-countries/langs/en.json"));
     const [answered, setAnswered] = useState(false);
     const [answer, setAnswer] = useState('');
@@ -16,6 +16,7 @@ function Selections({countries, order}: SelectionProps) {
     const selectionMade = (selection: string, countries: string[]) => {
         setAnswered(true);
         setAnswer(selection);
+        onSelect(countries[0] === selection ? 1 : -1)
     }
 
     const getType = (country: string, countries: string[]) => {

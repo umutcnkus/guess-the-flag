@@ -5,14 +5,15 @@ import {useState} from 'react';
 
 interface StatsProps {
     countries: string[];
+    success: number;
+    pass: number;
+    fails: number;
 }
 
 
-function Selections({countries}: StatsProps) {
+function Selections({countries, success, pass, fails}: StatsProps) {
     countriesApi.registerLocale(require("i18n-iso-countries/langs/en.json"));
-    const [success, setSuccess] = useState(0);
-    const [fails, setFails] = useState(0);
-    const [pass, setPass] = useState(0);
+
     return (
         <>
             <Card style={{width: '100%'}}>

@@ -14,7 +14,7 @@ function getMultipleRandom(arr: any[], num: number) {
 }
 
 function shuffle(array: any) {
-  let currentIndex = array.length,  randomIndex;
+  let currentIndex = array.length, randomIndex;
 
   // While there remain elements to shuffle.
   while (currentIndex !== 0) {
@@ -42,11 +42,29 @@ function App() {
 
   const onNext = () => {
     setRandomCountries(getCountries());
-    setOrder(getMultipleRandom([0,1,2,3], 4));
+    setOrder(getMultipleRandom([0, 1, 2, 3], 4));
   }
-  
+
+  const [success, setSuccess] = useState(0);
+  const [fails, setFails] = useState(0);
+  const [pass, setPass] = useState(0);
+
+  const changeStats = (stat: number) => {
+    switch (stat) {
+      case -1:
+        setFails(fails + 1)
+        break;
+      case 0:
+        setPass(pass + 1)
+        break;
+      case 1:
+        setSuccess(success + 1)
+        break;
+    }
+  }
+
   const [randomCountries, setRandomCountries] = useState(getCountries());
-  const [order, setOrder] = useState(getMultipleRandom([0,1,2,3], 4));
+  const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
 
   return (
     <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem'}}>
@@ -62,17 +80,17 @@ function App() {
       </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} lg={{span: 10}}>
-          <Flag countries={randomCountries} order={order}/>
+          <Flag countries={randomCountries} order={order} />
         </Col>
       </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} lg={{span: 10}}>
-          <Stats countries={randomCountries} />
+          <Stats countries={randomCountries} fails={fails} success={success} pass={pass}/>
         </Col>
       </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} lg={{span: 10}}>
-          <Selections countries={randomCountries} order={order} />
+          <Selections countries={randomCountries} order={order} onSelect={(stat) => changeStats(stat)} />
         </Col>
       </Row>
     </div>
