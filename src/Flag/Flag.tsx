@@ -4,13 +4,15 @@ import './Flag.css';
 
 interface FlagProps {
     countries: string[];
+    order: number[];
 }
 
-function Flag({countries}: FlagProps) {
+function Flag({countries, order}: FlagProps) {
     const [visible, setVisible] = useState(false);
     return (
         <>
             <Image
+                className='ant-card-bordered'
                 preview={{visible: false}}
                 width={'100%'}
                 src={"https://countryflagsapi.com/svg/" + countries[0]}
@@ -18,7 +20,7 @@ function Flag({countries}: FlagProps) {
             />
             <div style={{display: 'none'}}>
                 <Image.PreviewGroup preview={{visible, onVisibleChange: vis => setVisible(vis)}}>
-                    {countries.map((country) => <Image width={100} src={"https://countryflagsapi.com/svg/" + country} /> )}
+                    {order.map((idx) => <Image width={100} src={"https://countryflagsapi.com/svg/" + countries[idx]} /> )}
                 </Image.PreviewGroup>
             </div>
         </>
