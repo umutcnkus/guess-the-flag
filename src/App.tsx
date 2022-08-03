@@ -47,15 +47,11 @@ function App() {
 
   const [success, setSuccess] = useState(0);
   const [fails, setFails] = useState(0);
-  const [pass, setPass] = useState(0);
 
   const changeStats = (stat: number) => {
     switch (stat) {
       case -1:
         setFails(fails + 1)
-        break;
-      case 0:
-        setPass(pass + 1)
         break;
       case 1:
         setSuccess(success + 1)
@@ -69,7 +65,7 @@ function App() {
   return (
     <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem'}}>
       <Row justify="center" align="middle">
-        <Col xs={{span: 20}} lg={{span: 10}}>
+        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
           <PageHeader
             className="site-page-header"
             onBack={() => onNext()}
@@ -79,18 +75,18 @@ function App() {
         </Col>
       </Row>
       <Row justify="center" align="middle">
-        <Col xs={{span: 20}} lg={{span: 10}}>
+        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
           <Flag countries={randomCountries} order={order} />
         </Col>
       </Row>
       <Row justify="center" align="middle">
-        <Col xs={{span: 20}} lg={{span: 10}}>
-          <Stats countries={randomCountries} fails={fails} success={success} pass={pass}/>
+        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+          <Stats countries={randomCountries} fails={fails} success={success}/>
         </Col>
       </Row>
       <Row justify="center" align="middle">
-        <Col xs={{span: 20}} lg={{span: 10}}>
-          <Selections countries={randomCountries} order={order} onSelect={(stat) => changeStats(stat)} />
+        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+          <Selections countries={randomCountries} order={order} onSelect={changeStats} />
         </Col>
       </Row>
     </div>

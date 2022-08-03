@@ -14,7 +14,7 @@ function Flag({countries, order}: FlagProps) {
             <Image
                 className='ant-card-bordered'
                 preview={{visible: false}}
-                width={'100%'}
+                height={'20rem'}
                 src={"https://countryflagsapi.com/svg/" + countries[0]}
                 onClick={() => setVisible(true)}
             />

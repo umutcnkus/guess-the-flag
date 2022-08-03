@@ -1,11 +1,11 @@
 import {Alert, Row} from 'antd';
 import * as countriesApi from 'i18n-iso-countries';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 
 interface SelectionProps {
     countries: string[];
     order: number[];
-    onSelect: (stat: number) => void 
+    onSelect: (stat: number) => void
 }
 
 function Selections({countries, order, onSelect}: SelectionProps) {
@@ -13,10 +13,17 @@ function Selections({countries, order, onSelect}: SelectionProps) {
     const [answered, setAnswered] = useState(false);
     const [answer, setAnswer] = useState('');
 
+
+    useEffect(() => {
+        setAnswered(false);
+    }, [order]);
+
     const selectionMade = (selection: string, countries: string[]) => {
-        setAnswered(true);
-        setAnswer(selection);
-        onSelect(countries[0] === selection ? 1 : -1)
+        if (!answered) {
+            setAnswered(true);
+            setAnswer(selection);
+            onSelect(countries[0] === selection ? 1 : -1)
+        }
     }
 
     const getType = (country: string, countries: string[]) => {
