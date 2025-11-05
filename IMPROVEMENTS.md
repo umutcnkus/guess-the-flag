@@ -5,10 +5,10 @@
 ### Dependencies Updated ✅
 - **React**: 18.2.0 → 18.3.1
 - **antd**: 4.22.3 → 5.28.0 (major version with breaking changes)
-- **TypeScript**: 4.7.4 → 5.9.3
+- **TypeScript**: 4.7.4 → 4.9.5 (limited by react-scripts 5.0.1 compatibility)
 - **All testing libraries**: Updated to latest versions
 - **i18n-iso-countries**: 7.5.0 → 7.14.0
-- **web-vitals**: 2.1.4 → 5.1.0
+- **web-vitals**: 2.1.4 → 5.1.0 (FID replaced with INP metric)
 - **gh-pages**: 4.0.0 → 6.3.0
 
 ### API Fixes ✅
@@ -24,17 +24,19 @@
 ### Code Migrations ✅
 - Migrated from antd 4 to antd 5
 - Replaced deprecated `PageHeader` component with `Button`
-- Updated `visible` prop to `open` for Image preview (breaking change in antd 5)
+- Fixed `Image.PreviewGroup` to use correct `visible` prop
 - Removed Less CSS imports (antd 5 uses CSS-in-JS)
+- Updated web-vitals to use v5 API (onINP instead of deprecated onFID)
 - Added React keys to map iterations
 
-### Known Issues
-- TypeScript 5 shows warnings with `react-scripts` 5.0.1 (expects TypeScript 4.x)
-- Build works successfully despite warnings
-- **Options to resolve**:
-  1. Keep current setup (works fine, warnings are cosmetic)
-  2. Downgrade to TypeScript 4.9.5 to eliminate warnings
-  3. Migrate to Vite or Next.js for better TypeScript 5 support
+### Known Issues & Notes
+- **TypeScript**: Limited to 4.9.5 due to react-scripts 5.0.1 peer dependency requirements
+- **react-scripts**: Version 5.0.1 is the final version of Create React App (now in maintenance mode)
+- **Future Migration Path**: Consider migrating to Vite or Next.js for:
+  - Latest TypeScript support (5.x)
+  - Faster build times
+  - Modern tooling ecosystem
+  - Better developer experience
 
 ---
 
