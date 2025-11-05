@@ -8,7 +8,7 @@ interface FlagProps {
 }
 
 function Flag({countries, order}: FlagProps) {
-    const [open, setOpen] = useState(false);
+    const [visible, setVisible] = useState(false);
     return (
         <>
             <Image
@@ -16,10 +16,10 @@ function Flag({countries, order}: FlagProps) {
                 preview={{visible: false}}
                 height={'20rem'}
                 src={"https://flagcdn.com/" + countries[0].toLowerCase() + ".svg"}
-                onClick={() => setOpen(true)}
+                onClick={() => setVisible(true)}
             />
             <div style={{display: 'none'}}>
-                <Image.PreviewGroup preview={{open, onVisibleChange: vis => setOpen(vis)}}>
+                <Image.PreviewGroup preview={{visible, onVisibleChange: vis => setVisible(vis)}}>
                     {order.map((idx) => <Image key={idx} width={100} src={"https://flagcdn.com/" + countries[idx].toLowerCase() + ".svg"} /> )}
                 </Image.PreviewGroup>
             </div>
