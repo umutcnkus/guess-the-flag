@@ -8,19 +8,19 @@ interface FlagProps {
 }
 
 function Flag({countries, order}: FlagProps) {
-    const [visible, setVisible] = useState(false);
+    const [open, setOpen] = useState(false);
     return (
         <>
             <Image
                 className='ant-card-bordered'
                 preview={{visible: false}}
                 height={'20rem'}
-                src={"https://flagsapi.com/svg/" + countries[0]}
-                onClick={() => setVisible(true)}
+                src={"https://flagcdn.com/" + countries[0].toLowerCase() + ".svg"}
+                onClick={() => setOpen(true)}
             />
             <div style={{display: 'none'}}>
-                <Image.PreviewGroup preview={{visible, onVisibleChange: vis => setVisible(vis)}}>
-                    {order.map((idx) => <Image width={100} src={"https://countryflagsapi.com/svg/" + countries[idx]} /> )}
+                <Image.PreviewGroup preview={{open, onVisibleChange: vis => setOpen(vis)}}>
+                    {order.map((idx) => <Image key={idx} width={100} src={"https://flagcdn.com/" + countries[idx].toLowerCase() + ".svg"} /> )}
                 </Image.PreviewGroup>
             </div>
         </>

@@ -1,5 +1,5 @@
 import {ArrowRightOutlined} from '@ant-design/icons';
-import {Col, PageHeader, Row} from 'antd';
+import {Button, Col, Row} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState} from 'react';
 import './App.css';
@@ -66,12 +66,15 @@ function App() {
     <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem'}}>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <PageHeader
-            className="site-page-header"
-            onBack={() => onNext()}
-            title="Next"
-            backIcon={<ArrowRightOutlined />}
-          />
+          <Button
+            type="primary"
+            icon={<ArrowRightOutlined />}
+            onClick={() => onNext()}
+            size="large"
+            style={{width: '100%'}}
+          >
+            Next
+          </Button>
         </Col>
       </Row>
       <Row justify="center" align="middle">

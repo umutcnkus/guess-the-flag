@@ -1,4 +1,3 @@
-@import '~antd/dist/antd.css';
 .App {
   text-align: center;
 }
@@ -27,10 +26,6 @@
 
 .App-link {
   color: #61dafb;
-}
-
-.ant-page-header-heading {
-  justify-content: right;
 }
 
 @keyframes App-logo-spin {
