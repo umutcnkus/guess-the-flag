@@ -15,12 +15,12 @@ function Flag({countries, order}: FlagProps) {
                 className='ant-card-bordered'
                 preview={{visible: false}}
                 height={'20rem'}
-                src={"https://flagsapi.com/svg/" + countries[0]}
+                src={"https://flagcdn.com/" + countries[0].toLowerCase() + ".svg"}
                 onClick={() => setVisible(true)}
             />
             <div style={{display: 'none'}}>
                 <Image.PreviewGroup preview={{visible, onVisibleChange: vis => setVisible(vis)}}>
-                    {order.map((idx) => <Image width={100} src={"https://countryflagsapi.com/svg/" + countries[idx]} /> )}
+                    {order.map((idx) => <Image key={idx} width={100} src={"https://flagcdn.com/" + countries[idx].toLowerCase() + ".svg"} /> )}
                 </Image.PreviewGroup>
             </div>
         </>
