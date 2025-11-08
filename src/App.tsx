@@ -1,5 +1,5 @@
-import {ArrowRightOutlined, BulbOutlined, BulbFilled} from '@ant-design/icons';
-import {Button, Col, Row, ConfigProvider, theme, Space} from 'antd';
+import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined} from '@ant-design/icons';
+import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
 import './App.css';
@@ -7,6 +7,14 @@ import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
 import Stats from './Stats/Stats';
 import {loadStats, saveStats, loadTheme, saveTheme} from './utils/storage';
+import {
+  DifficultyLevel,
+  getDifficulty,
+  saveDifficulty,
+  filterCountriesByDifficulty,
+  getDifficultyColor,
+  getDifficultyLabel
+} from './utils/difficulty';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -38,11 +46,24 @@ function App() {
   // Dark mode state
   const [isDark, setIsDark] = useState(loadTheme());
 
-  const getCountries = () => {
+  // Difficulty state
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(getDifficulty());
+
+  const getCountries = (difficultyLevel?: DifficultyLevel) => {
     const countryObject = countries.getNames("en", {select: "official"});
-    const countryNames = Object.keys(countryObject);
-    return getMultipleRandom(countryNames, 4);
+    const allCountryNames = Object.keys(countryObject);
+    const filteredCountries = filterCountriesByDifficulty(allCountryNames, difficultyLevel || difficulty);
+    return getMultipleRandom(filteredCountries, 4);
   }
+
+  const handleDifficultyChange = (newDifficulty: DifficultyLevel) => {
+    setDifficulty(newDifficulty);
+    saveDifficulty(newDifficulty);
+    // Get new countries with the new difficulty
+    const newCountries = getCountries(newDifficulty);
+    setRandomCountries(newCountries);
+    setOrder(getMultipleRandom([0, 1, 2, 3], 4));
+  };
 
   const onNext = () => {
     setRandomCountries(getCountries());
@@ -112,6 +133,26 @@ function App() {
               >
                 {isDark ? 'Light Mode' : 'Dark Mode'}
               </Button>
+              <Select
+                value={difficulty}
+                onChange={handleDifficultyChange}
+                size="large"
+                style={{width: '100%'}}
+                suffixIcon={<TrophyOutlined />}
+              >
+                <Select.Option value="easy">
+                  <Tag color={getDifficultyColor('easy')}>Easy</Tag> 50 common flags
+                </Select.Option>
+                <Select.Option value="medium">
+                  <Tag color={getDifficultyColor('medium')}>Medium</Tag> All countries
+                </Select.Option>
+                <Select.Option value="hard">
+                  <Tag color={getDifficultyColor('hard')}>Hard</Tag> Challenging flags
+                </Select.Option>
+                <Select.Option value="expert">
+                  <Tag color={getDifficultyColor('expert')}>Expert</Tag> Similar flags
+                </Select.Option>
+              </Select>
               <Button
                 type="primary"
                 icon={<ArrowRightOutlined />}
