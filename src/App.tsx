@@ -1,11 +1,36 @@
-import {ArrowRightOutlined} from '@ant-design/icons';
-import {Button, Col, Row} from 'antd';
+import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined, BookOutlined} from '@ant-design/icons';
+import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic, Badge, Switch} from 'antd';
 import * as countries from 'i18n-iso-countries';
-import {useState} from 'react';
+import {useState, useEffect, useRef} from 'react';
+import Confetti from 'react-confetti';
+import {motion} from 'framer-motion';
 import './App.css';
 import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
 import Stats from './Stats/Stats';
+import {loadStats, saveStats, loadTheme, saveTheme, GameStats} from './utils/storage';
+import {
+  DifficultyLevel,
+  getDifficulty,
+  saveDifficulty,
+  filterCountriesByDifficulty,
+  getDifficultyColor,
+  getDifficultyLabel
+} from './utils/difficulty';
+import {GameMode, getGameMode, saveGameMode, GAME_MODES, calculateTimeBonus} from './utils/gameMode';
+import {
+  Achievement,
+  AchievementProgress,
+  loadAchievements,
+  saveAchievements,
+  checkAchievement,
+  unlockAchievement,
+  getUnlockedAchievements,
+} from './utils/achievements';
+import AchievementNotification from './components/AchievementNotification';
+import AchievementsModal from './components/AchievementsModal';
+import {getLearnMode, saveLearnMode, getFallbackCountryInfo, fetchCountryInfo, CountryInfo} from './utils/countryData';
+import CountryInfoCard from './components/CountryInfoCard';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -34,57 +59,433 @@ function shuffle(array: any) {
 function App() {
   countries.registerLocale(require("i18n-iso-countries/langs/en.json"));
 
-  const getCountries = () => {
+  // Dark mode state
+  const [isDark, setIsDark] = useState(loadTheme());
+
+  // Difficulty state
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(getDifficulty());
+
+  // Game mode state
+  const [gameMode, setGameMode] = useState<GameMode>(getGameMode());
+  const [timeRemaining, setTimeRemaining] = useState<number>(GAME_MODES[gameMode].timeLimit || 0);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [totalScore, setTotalScore] = useState(0);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getCountries = (difficultyLevel?: DifficultyLevel) => {
     const countryObject = countries.getNames("en", {select: "official"});
-    const countryNames = Object.keys(countryObject);
-    return getMultipleRandom(countryNames, 4);
+    const allCountryNames = Object.keys(countryObject);
+    const filteredCountries = filterCountriesByDifficulty(allCountryNames, difficultyLevel || difficulty);
+    return getMultipleRandom(filteredCountries, 4);
   }
+
+  const handleDifficultyChange = (newDifficulty: DifficultyLevel) => {
+    setDifficulty(newDifficulty);
+    saveDifficulty(newDifficulty);
+    // Get new countries with the new difficulty
+    const newCountries = getCountries(newDifficulty);
+    setRandomCountries(newCountries);
+    setOrder(getMultipleRandom([0, 1, 2, 3], 4));
+  };
 
   const onNext = () => {
     setRandomCountries(getCountries());
     setOrder(getMultipleRandom([0, 1, 2, 3], 4));
-  }
-
-  const [success, setSuccess] = useState(0);
-  const [fails, setFails] = useState(0);
-
-  const changeStats = (stat: number) => {
-    switch (stat) {
-      case -1:
-        setFails(fails + 1)
-        break;
-      case 1:
-        setSuccess(success + 1)
-        break;
+    setShowCountryInfo(false); // Hide country info for new question
+    // Reset timer for timed modes
+    const timeLimit = GAME_MODES[gameMode].timeLimit;
+    if (timeLimit) {
+      setTimeRemaining(timeLimit);
+      setQuestionStartTime(Date.now());
     }
   }
+
+  const toggleLearnMode = (checked: boolean) => {
+    setLearnMode(checked);
+    saveLearnMode(checked);
+    if (!checked) {
+      setShowCountryInfo(false);
+    }
+  };
+
+  const handleGameModeChange = (newMode: GameMode) => {
+    setGameMode(newMode);
+    saveGameMode(newMode);
+    const timeLimit = GAME_MODES[newMode].timeLimit;
+    if (timeLimit) {
+      setTimeRemaining(timeLimit);
+      setQuestionStartTime(Date.now());
+    }
+  };
+
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    saveTheme(newTheme);
+  };
+
+  // Load stats from localStorage on mount
+  const initialStats = loadStats();
+  const [success, setSuccess] = useState(initialStats.success);
+  const [fails, setFails] = useState(initialStats.fails);
+  const [currentStreak, setCurrentStreak] = useState(initialStats.currentStreak);
+  const [bestStreak, setBestStreak] = useState(initialStats.bestStreak);
+
+  // Confetti state
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  // Achievement state
+  const [achievementProgress, setAchievementProgress] = useState<AchievementProgress>(loadAchievements());
+  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+
+  // Learn mode state
+  const [learnMode, setLearnMode] = useState(getLearnMode());
+  const [showCountryInfo, setShowCountryInfo] = useState(false);
+  const [currentCountryInfo, setCurrentCountryInfo] = useState<CountryInfo | null>(null);
+  const [currentCountryCode, setCurrentCountryCode] = useState<string>('');
 
   const [randomCountries, setRandomCountries] = useState(getCountries());
   const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
 
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Timer countdown effect
+  useEffect(() => {
+    const timeLimit = GAME_MODES[gameMode].timeLimit;
+    if (!timeLimit) return; // No timer for classic mode
+
+    // Clear any existing timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 0) {
+          // Time's up - automatically count as fail and move to next
+          setFails((f) => f + 1);
+          setCurrentStreak(0);
+          onNext();
+          return timeLimit;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    timerIntervalRef.current = interval;
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [gameMode, order]); // Reset timer when question changes
+
+  // Save stats to localStorage whenever they change
+  useEffect(() => {
+    saveStats({
+      success,
+      fails,
+      currentStreak,
+      bestStreak,
+      gamesPlayed: success + fails,
+      totalTime: 0,
+      totalScore,
+      bestTime: 0,
+      averageTime: 0,
+    });
+  }, [success, fails, currentStreak, bestStreak, totalScore]);
+
+  // Save achievements whenever they change
+  useEffect(() => {
+    saveAchievements(achievementProgress);
+  }, [achievementProgress]);
+
+  // Check for achievements
+  const checkForAchievements = (newSuccess: number, newStreak: number, newBestStreak: number) => {
+    const achievementsToCheck = [
+      { id: 'first-steps', value: newSuccess },
+      { id: 'perfect-3', value: newStreak },
+      { id: 'perfect-5', value: newStreak },
+      { id: 'perfect-10', value: newStreak },
+      { id: 'perfect-25', value: newBestStreak },
+      { id: 'perfect-50', value: newBestStreak },
+      { id: 'beginner', value: newSuccess },
+      { id: 'intermediate', value: newSuccess },
+      { id: 'advanced', value: newSuccess },
+      { id: 'master', value: newSuccess },
+      { id: 'grandmaster', value: newSuccess },
+      { id: 'legend', value: newSuccess },
+    ];
+
+    achievementsToCheck.forEach(({ id, value }) => {
+      const achievement = checkAchievement(id, value, achievementProgress);
+      if (achievement) {
+        setCurrentAchievement(achievement);
+        setAchievementProgress(unlockAchievement(id, achievementProgress));
+        setTimeout(() => setCurrentAchievement(null), 5000);
+      }
+    });
+
+    // Special achievements
+    if (isDark && !achievementProgress['night-owl']?.unlocked) {
+      const achievement = checkAchievement('night-owl', 1, achievementProgress);
+      if (achievement) {
+        setCurrentAchievement(achievement);
+        setAchievementProgress(unlockAchievement('night-owl', achievementProgress));
+        setTimeout(() => setCurrentAchievement(null), 5000);
+      }
+    }
+  };
+
+  const changeStats = async (stat: number) => {
+    // Stop the timer when answer is selected
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    // Show country info if learn mode is enabled
+    if (learnMode && randomCountries.length > 0) {
+      const correctCountryCode = randomCountries[0];
+      const countryName = countries.getName(correctCountryCode, 'en') || correctCountryCode;
+
+      // Fetch from REST Countries API
+      let info = await fetchCountryInfo(correctCountryCode);
+      if (!info) {
+        info = getFallbackCountryInfo(countryName, correctCountryCode);
+      }
+
+      setCurrentCountryInfo(info);
+      setCurrentCountryCode(correctCountryCode);
+      setShowCountryInfo(true);
+    }
+
+    switch (stat) {
+      case -1:
+        setFails(fails + 1);
+        setCurrentStreak(0);
+        break;
+      case 1:
+        const newSuccess = success + 1;
+        setSuccess(newSuccess);
+        const newStreak = currentStreak + 1;
+        setCurrentStreak(newStreak);
+        const newBestStreak = newStreak > bestStreak ? newStreak : bestStreak;
+        if (newStreak > bestStreak) {
+          setBestStreak(newBestStreak);
+        }
+
+        // Calculate time bonus for timed modes
+        const config = GAME_MODES[gameMode];
+        let scoreGained = 10; // Base score
+        if (config.speedBonus && config.timeLimit) {
+          const bonus = calculateTimeBonus(timeRemaining, config.timeLimit);
+          scoreGained += bonus;
+        }
+        setTotalScore(totalScore + scoreGained);
+
+        // Check for achievements
+        checkForAchievements(newSuccess, newStreak, newBestStreak);
+
+        // Show confetti for streaks of 3, 5, 10, and every 10 after that
+        if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+        }
+        break;
+    }
+  }
+
   return (
-    <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem'}}>
-      <Row justify="center" align="middle">
-        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <Button
-            type="primary"
-            icon={<ArrowRightOutlined />}
-            onClick={() => onNext()}
-            size="large"
-            style={{width: '100%'}}
-          >
-            Next
-          </Button>
-        </Col>
-      </Row>
+    <ConfigProvider
+      theme={{
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      }}
+    >
+      {showConfetti && (
+        <Confetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={500}
+          gravity={0.3}
+        />
+      )}
+      <AchievementNotification
+        achievement={currentAchievement}
+        onClose={() => setCurrentAchievement(null)}
+      />
+      <AchievementsModal
+        visible={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        progress={achievementProgress}
+        currentStats={{
+          success,
+          currentStreak,
+          bestStreak,
+        }}
+      />
+      <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', padding: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <Space style={{width: '100%'}} direction="vertical" size="middle">
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Button
+                    icon={isDark ? <BulbFilled /> : <BulbOutlined />}
+                    onClick={toggleTheme}
+                    size="large"
+                    block
+                  >
+                    {isDark ? 'Light' : 'Dark'}
+                  </Button>
+                </Col>
+                <Col span={12}>
+                  <Badge
+                    count={getUnlockedAchievements(achievementProgress).length}
+                    showZero
+                    offset={[-5, 5]}
+                  >
+                    <Button
+                      icon={<TrophyOutlined />}
+                      onClick={() => setShowAchievementsModal(true)}
+                      size="large"
+                      block
+                    >
+                      Achievements
+                    </Button>
+                  </Badge>
+                </Col>
+              </Row>
+              <Select
+                value={gameMode}
+                onChange={handleGameModeChange}
+                size="large"
+                style={{width: '100%'}}
+                suffixIcon={<ClockCircleOutlined />}
+              >
+                <Select.Option value="classic">
+                  <ClockCircleOutlined /> Classic - No timer
+                </Select.Option>
+                <Select.Option value="timed">
+                  <ClockCircleOutlined /> Timed - 15s per question
+                </Select.Option>
+                <Select.Option value="speed">
+                  <ThunderboltOutlined /> Speed - 5s per question
+                </Select.Option>
+              </Select>
+              <Select
+                value={difficulty}
+                onChange={handleDifficultyChange}
+                size="large"
+                style={{width: '100%'}}
+                suffixIcon={<TrophyOutlined />}
+              >
+                <Select.Option value="easy">
+                  <Tag color={getDifficultyColor('easy')}>Easy</Tag> 50 common flags
+                </Select.Option>
+                <Select.Option value="medium">
+                  <Tag color={getDifficultyColor('medium')}>Medium</Tag> All countries
+                </Select.Option>
+                <Select.Option value="hard">
+                  <Tag color={getDifficultyColor('hard')}>Hard</Tag> Challenging flags
+                </Select.Option>
+                <Select.Option value="expert">
+                  <Tag color={getDifficultyColor('expert')}>Expert</Tag> Similar flags
+                </Select.Option>
+              </Select>
+              <Row
+                style={{
+                  width: '100%',
+                  padding: '4px 11px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '6px',
+                  height: '40px',
+                  alignItems: 'center'
+                }}
+              >
+                <Col flex="auto">
+                  <span style={{fontSize: '16px'}}><BookOutlined /> Learn Mode</span>
+                </Col>
+                <Col>
+                  <Switch checked={learnMode} onChange={toggleLearnMode} />
+                </Col>
+              </Row>
+              <Button
+                type="primary"
+                icon={<ArrowRightOutlined />}
+                onClick={() => onNext()}
+                size="large"
+                style={{width: '100%'}}
+              >
+                Next
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
           <Flag countries={randomCountries} order={order} />
         </Col>
       </Row>
+      {GAME_MODES[gameMode].timeLimit && (
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Space direction="vertical" style={{width: '100%'}}>
+                <Progress
+                  percent={(timeRemaining / GAME_MODES[gameMode].timeLimit!) * 100}
+                  strokeColor={timeRemaining <= 3 ? '#ff4d4f' : timeRemaining <= 5 ? '#faad14' : '#52c41a'}
+                  showInfo={false}
+                />
+                <Statistic
+                  title="Time Remaining"
+                  value={timeRemaining}
+                  suffix="seconds"
+                  valueStyle={{ fontSize: '2rem', color: timeRemaining <= 3 ? '#ff4d4f' : undefined }}
+                />
+                {GAME_MODES[gameMode].speedBonus && (
+                  <Statistic
+                    title="Total Score"
+                    value={totalScore}
+                    prefix={<ThunderboltOutlined />}
+                    valueStyle={{ color: '#faad14' }}
+                  />
+                )}
+              </Space>
+            </motion.div>
+          </Col>
+        </Row>
+      )}
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <Stats countries={randomCountries} fails={fails} success={success}/>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Stats countries={randomCountries} fails={fails} success={success} currentStreak={currentStreak} bestStreak={bestStreak}/>
+          </motion.div>
         </Col>
       </Row>
       <Row justify="center" align="middle">
@@ -92,7 +493,15 @@ function App() {
           <Selections countries={randomCountries} order={order} onSelect={changeStats} />
         </Col>
       </Row>
-    </div>
+      {learnMode && showCountryInfo && currentCountryInfo && (
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <CountryInfoCard countryInfo={currentCountryInfo} countryCode={currentCountryCode} />
+          </Col>
+        </Row>
+      )}
+      </div>
+    </ConfigProvider>
   );
 }
 
