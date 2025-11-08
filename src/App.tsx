@@ -29,7 +29,7 @@ import {
 } from './utils/achievements';
 import AchievementNotification from './components/AchievementNotification';
 import AchievementsModal from './components/AchievementsModal';
-import {getLearnMode, saveLearnMode, getCountryInfo, getFallbackCountryInfo, fetchCountryInfo, CountryInfo} from './utils/countryData';
+import {getLearnMode, saveLearnMode, getFallbackCountryInfo, fetchCountryInfo, CountryInfo} from './utils/countryData';
 import CountryInfoCard from './components/CountryInfoCard';
 
 function getMultipleRandom(arr: any[], num: number) {
@@ -246,10 +246,10 @@ function App() {
       const correctCountryCode = randomCountries[0];
       const countryName = countries.getName(correctCountryCode, 'en') || correctCountryCode;
 
-      // Try to fetch from API first, fallback to local data
+      // Fetch from REST Countries API
       let info = await fetchCountryInfo(correctCountryCode);
       if (!info) {
-        info = getCountryInfo(correctCountryCode) || getFallbackCountryInfo(countryName, correctCountryCode);
+        info = getFallbackCountryInfo(countryName, correctCountryCode);
       }
 
       setCurrentCountryInfo(info);

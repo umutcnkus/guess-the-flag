@@ -1,9 +1,9 @@
 import {Card, Descriptions, Typography} from 'antd';
-import {GlobalOutlined, EnvironmentOutlined, TeamOutlined, ExpandOutlined, CommentOutlined} from '@ant-design/icons';
+import {GlobalOutlined, EnvironmentOutlined, TeamOutlined, ExpandOutlined} from '@ant-design/icons';
 import {motion} from 'framer-motion';
 import {CountryInfo} from '../utils/countryData';
 
-const {Title, Paragraph} = Typography;
+const {Title} = Typography;
 
 interface CountryInfoCardProps {
   countryInfo: CountryInfo | null;
@@ -58,16 +58,6 @@ function CountryInfoCard({countryInfo, countryCode}: CountryInfoCardProps) {
             {countryInfo.currencies}
           </Descriptions.Item>
         </Descriptions>
-
-        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f5ff', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <CommentOutlined style={{ color: '#1890ff' }} />
-            <strong>Fun Fact</strong>
-          </div>
-          <Paragraph style={{ margin: 0 }}>
-            {countryInfo.funFact}
-          </Paragraph>
-        </div>
       </Card>
     </motion.div>
   );
