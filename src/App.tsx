@@ -1,5 +1,5 @@
 import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined} from '@ant-design/icons';
-import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic} from 'antd';
+import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic, Badge} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
 import Confetti from 'react-confetti';
@@ -18,6 +18,17 @@ import {
   getDifficultyLabel
 } from './utils/difficulty';
 import {GameMode, getGameMode, saveGameMode, GAME_MODES, calculateTimeBonus} from './utils/gameMode';
+import {
+  Achievement,
+  AchievementProgress,
+  loadAchievements,
+  saveAchievements,
+  checkAchievement,
+  unlockAchievement,
+  getUnlockedAchievements,
+} from './utils/achievements';
+import AchievementNotification from './components/AchievementNotification';
+import AchievementsModal from './components/AchievementsModal';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -115,6 +126,11 @@ function App() {
     height: window.innerHeight,
   });
 
+  // Achievement state
+  const [achievementProgress, setAchievementProgress] = useState<AchievementProgress>(loadAchievements());
+  const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+
   const [randomCountries, setRandomCountries] = useState(getCountries());
   const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
 
@@ -165,6 +181,48 @@ function App() {
     });
   }, [success, fails, currentStreak, bestStreak, totalScore]);
 
+  // Save achievements whenever they change
+  useEffect(() => {
+    saveAchievements(achievementProgress);
+  }, [achievementProgress]);
+
+  // Check for achievements
+  const checkForAchievements = (newSuccess: number, newStreak: number, newBestStreak: number) => {
+    const achievementsToCheck = [
+      { id: 'first-steps', value: newSuccess },
+      { id: 'perfect-3', value: newStreak },
+      { id: 'perfect-5', value: newStreak },
+      { id: 'perfect-10', value: newStreak },
+      { id: 'perfect-25', value: newBestStreak },
+      { id: 'perfect-50', value: newBestStreak },
+      { id: 'beginner', value: newSuccess },
+      { id: 'intermediate', value: newSuccess },
+      { id: 'advanced', value: newSuccess },
+      { id: 'master', value: newSuccess },
+      { id: 'grandmaster', value: newSuccess },
+      { id: 'legend', value: newSuccess },
+    ];
+
+    achievementsToCheck.forEach(({ id, value }) => {
+      const achievement = checkAchievement(id, value, achievementProgress);
+      if (achievement) {
+        setCurrentAchievement(achievement);
+        setAchievementProgress(unlockAchievement(id, achievementProgress));
+        setTimeout(() => setCurrentAchievement(null), 5000);
+      }
+    });
+
+    // Special achievements
+    if (isDark && !achievementProgress['night-owl']?.unlocked) {
+      const achievement = checkAchievement('night-owl', 1, achievementProgress);
+      if (achievement) {
+        setCurrentAchievement(achievement);
+        setAchievementProgress(unlockAchievement('night-owl', achievementProgress));
+        setTimeout(() => setCurrentAchievement(null), 5000);
+      }
+    }
+  };
+
   const changeStats = (stat: number) => {
     switch (stat) {
       case -1:
@@ -172,11 +230,13 @@ function App() {
         setCurrentStreak(0);
         break;
       case 1:
-        setSuccess(success + 1);
+        const newSuccess = success + 1;
+        setSuccess(newSuccess);
         const newStreak = currentStreak + 1;
         setCurrentStreak(newStreak);
+        const newBestStreak = newStreak > bestStreak ? newStreak : bestStreak;
         if (newStreak > bestStreak) {
-          setBestStreak(newStreak);
+          setBestStreak(newBestStreak);
         }
 
         // Calculate time bonus for timed modes
@@ -187,6 +247,9 @@ function App() {
           scoreGained += bonus;
         }
         setTotalScore(totalScore + scoreGained);
+
+        // Check for achievements
+        checkForAchievements(newSuccess, newStreak, newBestStreak);
 
         // Show confetti for streaks of 3, 5, 10, and every 10 after that
         if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
@@ -212,18 +275,44 @@ function App() {
           gravity={0.3}
         />
       )}
+      <AchievementNotification
+        achievement={currentAchievement}
+        onClose={() => setCurrentAchievement(null)}
+      />
+      <AchievementsModal
+        visible={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        progress={achievementProgress}
+        currentStats={{
+          success,
+          currentStreak,
+          bestStreak,
+        }}
+      />
       <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
         <Row justify="center" align="middle">
           <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
             <Space style={{width: '100%'}} direction="vertical">
-              <Button
-                icon={isDark ? <BulbFilled /> : <BulbOutlined />}
-                onClick={toggleTheme}
-                size="large"
-                style={{width: '100%'}}
-              >
-                {isDark ? 'Light Mode' : 'Dark Mode'}
-              </Button>
+              <Space.Compact style={{width: '100%'}}>
+                <Button
+                  icon={isDark ? <BulbFilled /> : <BulbOutlined />}
+                  onClick={toggleTheme}
+                  size="large"
+                  style={{width: '50%'}}
+                >
+                  {isDark ? 'Light' : 'Dark'}
+                </Button>
+                <Badge count={getUnlockedAchievements(achievementProgress).length} showZero>
+                  <Button
+                    icon={<TrophyOutlined />}
+                    onClick={() => setShowAchievementsModal(true)}
+                    size="large"
+                    style={{width: '100%'}}
+                  >
+                    Achievements
+                  </Button>
+                </Badge>
+              </Space.Compact>
               <Select
                 value={gameMode}
                 onChange={handleGameModeChange}
