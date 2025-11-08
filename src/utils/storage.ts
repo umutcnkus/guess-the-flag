@@ -7,6 +7,9 @@ export interface GameStats {
   bestStreak: number;
   gamesPlayed: number;
   totalTime: number;
+  totalScore: number;
+  bestTime: number;
+  averageTime: number;
 }
 
 const STORAGE_KEY = 'flag-game-stats';
@@ -38,6 +41,9 @@ export const loadStats = (): GameStats => {
     bestStreak: 0,
     gamesPlayed: 0,
     totalTime: 0,
+    totalScore: 0,
+    bestTime: 999999,
+    averageTime: 0,
   };
 };
 

@@ -1,5 +1,5 @@
-import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined} from '@ant-design/icons';
-import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag} from 'antd';
+import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined} from '@ant-design/icons';
+import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
 import Confetti from 'react-confetti';
@@ -8,7 +8,7 @@ import './App.css';
 import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
 import Stats from './Stats/Stats';
-import {loadStats, saveStats, loadTheme, saveTheme} from './utils/storage';
+import {loadStats, saveStats, loadTheme, saveTheme, GameStats} from './utils/storage';
 import {
   DifficultyLevel,
   getDifficulty,
@@ -17,6 +17,7 @@ import {
   getDifficultyColor,
   getDifficultyLabel
 } from './utils/difficulty';
+import {GameMode, getGameMode, saveGameMode, GAME_MODES, calculateTimeBonus} from './utils/gameMode';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -51,6 +52,12 @@ function App() {
   // Difficulty state
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(getDifficulty());
 
+  // Game mode state
+  const [gameMode, setGameMode] = useState<GameMode>(getGameMode());
+  const [timeRemaining, setTimeRemaining] = useState<number>(GAME_MODES[gameMode].timeLimit || 0);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [totalScore, setTotalScore] = useState(0);
+
   const getCountries = (difficultyLevel?: DifficultyLevel) => {
     const countryObject = countries.getNames("en", {select: "official"});
     const allCountryNames = Object.keys(countryObject);
@@ -70,7 +77,23 @@ function App() {
   const onNext = () => {
     setRandomCountries(getCountries());
     setOrder(getMultipleRandom([0, 1, 2, 3], 4));
+    // Reset timer for timed modes
+    const timeLimit = GAME_MODES[gameMode].timeLimit;
+    if (timeLimit) {
+      setTimeRemaining(timeLimit);
+      setQuestionStartTime(Date.now());
+    }
   }
+
+  const handleGameModeChange = (newMode: GameMode) => {
+    setGameMode(newMode);
+    saveGameMode(newMode);
+    const timeLimit = GAME_MODES[newMode].timeLimit;
+    if (timeLimit) {
+      setTimeRemaining(timeLimit);
+      setQuestionStartTime(Date.now());
+    }
+  };
 
   const toggleTheme = () => {
     const newTheme = !isDark;
@@ -92,6 +115,9 @@ function App() {
     height: window.innerHeight,
   });
 
+  const [randomCountries, setRandomCountries] = useState(getCountries());
+  const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
+
   useEffect(() => {
     const handleResize = () => {
       setWindowSize({
@@ -103,6 +129,27 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Timer countdown effect
+  useEffect(() => {
+    const timeLimit = GAME_MODES[gameMode].timeLimit;
+    if (!timeLimit) return; // No timer for classic mode
+
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 0) {
+          // Time's up - automatically count as fail and move to next
+          setFails((f) => f + 1);
+          setCurrentStreak(0);
+          onNext();
+          return timeLimit;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [gameMode, order]); // Reset timer when question changes
+
   // Save stats to localStorage whenever they change
   useEffect(() => {
     saveStats({
@@ -112,8 +159,11 @@ function App() {
       bestStreak,
       gamesPlayed: success + fails,
       totalTime: 0,
+      totalScore,
+      bestTime: 0,
+      averageTime: 0,
     });
-  }, [success, fails, currentStreak, bestStreak]);
+  }, [success, fails, currentStreak, bestStreak, totalScore]);
 
   const changeStats = (stat: number) => {
     switch (stat) {
@@ -128,6 +178,16 @@ function App() {
         if (newStreak > bestStreak) {
           setBestStreak(newStreak);
         }
+
+        // Calculate time bonus for timed modes
+        const config = GAME_MODES[gameMode];
+        let scoreGained = 10; // Base score
+        if (config.speedBonus && config.timeLimit) {
+          const bonus = calculateTimeBonus(timeRemaining, config.timeLimit);
+          scoreGained += bonus;
+        }
+        setTotalScore(totalScore + scoreGained);
+
         // Show confetti for streaks of 3, 5, 10, and every 10 after that
         if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
           setShowConfetti(true);
@@ -136,9 +196,6 @@ function App() {
         break;
     }
   }
-
-  const [randomCountries, setRandomCountries] = useState(getCountries());
-  const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
 
   return (
     <ConfigProvider
@@ -167,6 +224,23 @@ function App() {
               >
                 {isDark ? 'Light Mode' : 'Dark Mode'}
               </Button>
+              <Select
+                value={gameMode}
+                onChange={handleGameModeChange}
+                size="large"
+                style={{width: '100%'}}
+                suffixIcon={<ClockCircleOutlined />}
+              >
+                <Select.Option value="classic">
+                  <ClockCircleOutlined /> Classic - No timer
+                </Select.Option>
+                <Select.Option value="timed">
+                  <ClockCircleOutlined /> Timed - 15s per question
+                </Select.Option>
+                <Select.Option value="speed">
+                  <ThunderboltOutlined /> Speed - 5s per question
+                </Select.Option>
+              </Select>
               <Select
                 value={difficulty}
                 onChange={handleDifficultyChange}
@@ -204,6 +278,39 @@ function App() {
           <Flag countries={randomCountries} order={order} />
         </Col>
       </Row>
+      {GAME_MODES[gameMode].timeLimit && (
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Space direction="vertical" style={{width: '100%'}}>
+                <Progress
+                  percent={(timeRemaining / GAME_MODES[gameMode].timeLimit!) * 100}
+                  strokeColor={timeRemaining <= 3 ? '#ff4d4f' : timeRemaining <= 5 ? '#faad14' : '#52c41a'}
+                  showInfo={false}
+                />
+                <Statistic
+                  title="Time Remaining"
+                  value={timeRemaining}
+                  suffix="seconds"
+                  valueStyle={{ fontSize: '2rem', color: timeRemaining <= 3 ? '#ff4d4f' : undefined }}
+                />
+                {GAME_MODES[gameMode].speedBonus && (
+                  <Statistic
+                    title="Total Score"
+                    value={totalScore}
+                    prefix={<ThunderboltOutlined />}
+                    valueStyle={{ color: '#faad14' }}
+                  />
+                )}
+              </Space>
+            </motion.div>
+          </Col>
+        </Row>
+      )}
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
           <motion.div
