@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/guess-the-flag/static/css/main.33e8bb70.css",
-    "main.js": "/guess-the-flag/static/js/main.5d7b8daf.js",
-    "static/js/787.7b59777d.chunk.js": "/guess-the-flag/static/js/787.7b59777d.chunk.js",
+    "main.css": "/guess-the-flag/static/css/main.67262d40.css",
+    "main.js": "/guess-the-flag/static/js/main.b0446018.js",
+    "static/js/488.feb6d03e.chunk.js": "/guess-the-flag/static/js/488.feb6d03e.chunk.js",
     "index.html": "/guess-the-flag/index.html",
-    "main.33e8bb70.css.map": "/guess-the-flag/static/css/main.33e8bb70.css.map",
-    "main.5d7b8daf.js.map": "/guess-the-flag/static/js/main.5d7b8daf.js.map",
-    "787.7b59777d.chunk.js.map": "/guess-the-flag/static/js/787.7b59777d.chunk.js.map"
+    "main.67262d40.css.map": "/guess-the-flag/static/css/main.67262d40.css.map",
+    "main.b0446018.js.map": "/guess-the-flag/static/js/main.b0446018.js.map",
+    "488.feb6d03e.chunk.js.map": "/guess-the-flag/static/js/488.feb6d03e.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.33e8bb70.css",
-    "static/js/main.5d7b8daf.js"
+    "static/css/main.67262d40.css",
+    "static/js/main.b0446018.js"
   ]
 }
