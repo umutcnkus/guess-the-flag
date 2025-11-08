@@ -361,7 +361,6 @@ function App() {
                     count={getUnlockedAchievements(achievementProgress).length}
                     showZero
                     offset={[-5, 5]}
-                    style={{ width: '100%', display: 'block' }}
                   >
                     <Button
                       icon={<TrophyOutlined />}
