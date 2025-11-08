@@ -1,5 +1,5 @@
-import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined} from '@ant-design/icons';
-import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic, Badge} from 'antd';
+import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined, BookOutlined} from '@ant-design/icons';
+import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic, Badge, Switch} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
 import Confetti from 'react-confetti';
@@ -29,6 +29,8 @@ import {
 } from './utils/achievements';
 import AchievementNotification from './components/AchievementNotification';
 import AchievementsModal from './components/AchievementsModal';
+import {getLearnMode, saveLearnMode, getCountryInfo, getFallbackCountryInfo, CountryInfo} from './utils/countryData';
+import CountryInfoCard from './components/CountryInfoCard';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -88,6 +90,7 @@ function App() {
   const onNext = () => {
     setRandomCountries(getCountries());
     setOrder(getMultipleRandom([0, 1, 2, 3], 4));
+    setShowCountryInfo(false); // Hide country info for new question
     // Reset timer for timed modes
     const timeLimit = GAME_MODES[gameMode].timeLimit;
     if (timeLimit) {
@@ -95,6 +98,14 @@ function App() {
       setQuestionStartTime(Date.now());
     }
   }
+
+  const toggleLearnMode = (checked: boolean) => {
+    setLearnMode(checked);
+    saveLearnMode(checked);
+    if (!checked) {
+      setShowCountryInfo(false);
+    }
+  };
 
   const handleGameModeChange = (newMode: GameMode) => {
     setGameMode(newMode);
@@ -130,6 +141,12 @@ function App() {
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress>(loadAchievements());
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+
+  // Learn mode state
+  const [learnMode, setLearnMode] = useState(getLearnMode());
+  const [showCountryInfo, setShowCountryInfo] = useState(false);
+  const [currentCountryInfo, setCurrentCountryInfo] = useState<CountryInfo | null>(null);
+  const [currentCountryCode, setCurrentCountryCode] = useState<string>('');
 
   const [randomCountries, setRandomCountries] = useState(getCountries());
   const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
@@ -224,6 +241,16 @@ function App() {
   };
 
   const changeStats = (stat: number) => {
+    // Show country info if learn mode is enabled
+    if (learnMode && randomCountries.length > 0) {
+      const correctCountryCode = randomCountries[0];
+      const countryName = countries.getName(correctCountryCode, 'en') || correctCountryCode;
+      const info = getCountryInfo(correctCountryCode) || getFallbackCountryInfo(countryName, correctCountryCode);
+      setCurrentCountryInfo(info);
+      setCurrentCountryCode(correctCountryCode);
+      setShowCountryInfo(true);
+    }
+
     switch (stat) {
       case -1:
         setFails(fails + 1);
@@ -350,6 +377,10 @@ function App() {
                   <Tag color={getDifficultyColor('expert')}>Expert</Tag> Similar flags
                 </Select.Option>
               </Select>
+              <Space style={{width: '100%', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: '8px'}}>
+                <span><BookOutlined /> Learn Mode</span>
+                <Switch checked={learnMode} onChange={toggleLearnMode} />
+              </Space>
               <Button
                 type="primary"
                 icon={<ArrowRightOutlined />}
@@ -416,6 +447,13 @@ function App() {
           <Selections countries={randomCountries} order={order} onSelect={changeStats} />
         </Col>
       </Row>
+      {learnMode && showCountryInfo && currentCountryInfo && (
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <CountryInfoCard countryInfo={currentCountryInfo} countryCode={currentCountryCode} />
+          </Col>
+        </Row>
+      )}
       </div>
     </ConfigProvider>
   );
