@@ -1,7 +1,7 @@
 import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined, ClockCircleOutlined, ThunderboltOutlined, BookOutlined} from '@ant-design/icons';
 import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag, Progress, Statistic, Badge, Switch} from 'antd';
 import * as countries from 'i18n-iso-countries';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import Confetti from 'react-confetti';
 import {motion} from 'framer-motion';
 import './App.css';
@@ -70,6 +70,7 @@ function App() {
   const [timeRemaining, setTimeRemaining] = useState<number>(GAME_MODES[gameMode].timeLimit || 0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [totalScore, setTotalScore] = useState(0);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const getCountries = (difficultyLevel?: DifficultyLevel) => {
     const countryObject = countries.getNames("en", {select: "official"});
@@ -167,6 +168,11 @@ function App() {
     const timeLimit = GAME_MODES[gameMode].timeLimit;
     if (!timeLimit) return; // No timer for classic mode
 
+    // Clear any existing timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 0) {
@@ -180,7 +186,14 @@ function App() {
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    timerIntervalRef.current = interval;
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
   }, [gameMode, order]); // Reset timer when question changes
 
   // Save stats to localStorage whenever they change
@@ -241,6 +254,12 @@ function App() {
   };
 
   const changeStats = async (stat: number) => {
+    // Stop the timer when answer is selected
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
     // Show country info if learn mode is enabled
     if (learnMode && randomCountries.length > 0) {
       const correctCountryCode = randomCountries[0];
@@ -342,6 +361,7 @@ function App() {
                     count={getUnlockedAchievements(achievementProgress).length}
                     showZero
                     offset={[-5, 5]}
+                    style={{ width: '100%', display: 'block' }}
                   >
                     <Button
                       icon={<TrophyOutlined />}
