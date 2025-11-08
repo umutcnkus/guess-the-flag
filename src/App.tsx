@@ -1,11 +1,12 @@
 import {ArrowRightOutlined} from '@ant-design/icons';
 import {Button, Col, Row} from 'antd';
 import * as countries from 'i18n-iso-countries';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import './App.css';
 import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
 import Stats from './Stats/Stats';
+import {loadStats, saveStats} from './utils/storage';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -45,16 +46,38 @@ function App() {
     setOrder(getMultipleRandom([0, 1, 2, 3], 4));
   }
 
-  const [success, setSuccess] = useState(0);
-  const [fails, setFails] = useState(0);
+  // Load stats from localStorage on mount
+  const initialStats = loadStats();
+  const [success, setSuccess] = useState(initialStats.success);
+  const [fails, setFails] = useState(initialStats.fails);
+  const [currentStreak, setCurrentStreak] = useState(initialStats.currentStreak);
+  const [bestStreak, setBestStreak] = useState(initialStats.bestStreak);
+
+  // Save stats to localStorage whenever they change
+  useEffect(() => {
+    saveStats({
+      success,
+      fails,
+      currentStreak,
+      bestStreak,
+      gamesPlayed: success + fails,
+      totalTime: 0,
+    });
+  }, [success, fails, currentStreak, bestStreak]);
 
   const changeStats = (stat: number) => {
     switch (stat) {
       case -1:
-        setFails(fails + 1)
+        setFails(fails + 1);
+        setCurrentStreak(0);
         break;
       case 1:
-        setSuccess(success + 1)
+        setSuccess(success + 1);
+        const newStreak = currentStreak + 1;
+        setCurrentStreak(newStreak);
+        if (newStreak > bestStreak) {
+          setBestStreak(newStreak);
+        }
         break;
     }
   }
@@ -84,7 +107,7 @@ function App() {
       </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <Stats countries={randomCountries} fails={fails} success={success}/>
+          <Stats countries={randomCountries} fails={fails} success={success} currentStreak={currentStreak} bestStreak={bestStreak}/>
         </Col>
       </Row>
       <Row justify="center" align="middle">
