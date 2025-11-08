@@ -29,7 +29,7 @@ import {
 } from './utils/achievements';
 import AchievementNotification from './components/AchievementNotification';
 import AchievementsModal from './components/AchievementsModal';
-import {getLearnMode, saveLearnMode, getCountryInfo, getFallbackCountryInfo, CountryInfo} from './utils/countryData';
+import {getLearnMode, saveLearnMode, getCountryInfo, getFallbackCountryInfo, fetchCountryInfo, CountryInfo} from './utils/countryData';
 import CountryInfoCard from './components/CountryInfoCard';
 
 function getMultipleRandom(arr: any[], num: number) {
@@ -240,12 +240,18 @@ function App() {
     }
   };
 
-  const changeStats = (stat: number) => {
+  const changeStats = async (stat: number) => {
     // Show country info if learn mode is enabled
     if (learnMode && randomCountries.length > 0) {
       const correctCountryCode = randomCountries[0];
       const countryName = countries.getName(correctCountryCode, 'en') || correctCountryCode;
-      const info = getCountryInfo(correctCountryCode) || getFallbackCountryInfo(countryName, correctCountryCode);
+
+      // Try to fetch from API first, fallback to local data
+      let info = await fetchCountryInfo(correctCountryCode);
+      if (!info) {
+        info = getCountryInfo(correctCountryCode) || getFallbackCountryInfo(countryName, correctCountryCode);
+      }
+
       setCurrentCountryInfo(info);
       setCurrentCountryCode(correctCountryCode);
       setShowCountryInfo(true);
@@ -319,27 +325,35 @@ function App() {
       <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', padding: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
         <Row justify="center" align="middle">
           <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-            <Space style={{width: '100%'}} direction="vertical">
-              <Space.Compact style={{width: '100%'}}>
-                <Button
-                  icon={isDark ? <BulbFilled /> : <BulbOutlined />}
-                  onClick={toggleTheme}
-                  size="large"
-                  style={{width: '50%'}}
-                >
-                  {isDark ? 'Light' : 'Dark'}
-                </Button>
-                <Badge count={getUnlockedAchievements(achievementProgress).length} showZero>
+            <Space style={{width: '100%'}} direction="vertical" size="middle">
+              <Row gutter={8}>
+                <Col span={12}>
                   <Button
-                    icon={<TrophyOutlined />}
-                    onClick={() => setShowAchievementsModal(true)}
+                    icon={isDark ? <BulbFilled /> : <BulbOutlined />}
+                    onClick={toggleTheme}
                     size="large"
-                    style={{width: '100%'}}
+                    block
                   >
-                    Achievements
+                    {isDark ? 'Light' : 'Dark'}
                   </Button>
-                </Badge>
-              </Space.Compact>
+                </Col>
+                <Col span={12}>
+                  <Badge
+                    count={getUnlockedAchievements(achievementProgress).length}
+                    showZero
+                    offset={[-5, 5]}
+                  >
+                    <Button
+                      icon={<TrophyOutlined />}
+                      onClick={() => setShowAchievementsModal(true)}
+                      size="large"
+                      block
+                    >
+                      Achievements
+                    </Button>
+                  </Badge>
+                </Col>
+              </Row>
               <Select
                 value={gameMode}
                 onChange={handleGameModeChange}
@@ -377,10 +391,23 @@ function App() {
                   <Tag color={getDifficultyColor('expert')}>Expert</Tag> Similar flags
                 </Select.Option>
               </Select>
-              <Space style={{width: '100%', justifyContent: 'space-between', padding: '8px 12px', border: '1px solid #d9d9d9', borderRadius: '8px'}}>
-                <span><BookOutlined /> Learn Mode</span>
-                <Switch checked={learnMode} onChange={toggleLearnMode} />
-              </Space>
+              <Row
+                style={{
+                  width: '100%',
+                  padding: '4px 11px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '6px',
+                  height: '40px',
+                  alignItems: 'center'
+                }}
+              >
+                <Col flex="auto">
+                  <span style={{fontSize: '16px'}}><BookOutlined /> Learn Mode</span>
+                </Col>
+                <Col>
+                  <Switch checked={learnMode} onChange={toggleLearnMode} />
+                </Col>
+              </Row>
               <Button
                 type="primary"
                 icon={<ArrowRightOutlined />}

@@ -109,3 +109,75 @@ export const getFallbackCountryInfo = (countryName: string, countryCode: string)
     funFact: `The flag code for ${countryName} is ${countryCode}`,
   };
 };
+
+// Fetch country data from REST Countries API
+// API: https://restcountries.com/v3.1/alpha/{code}
+export const fetchCountryInfo = async (countryCode: string): Promise<CountryInfo | null> => {
+  try {
+    const response = await fetch(`https://restcountries.com/v3.1/alpha/${countryCode}`);
+
+    if (!response.ok) {
+      throw new Error('Country not found');
+    }
+
+    const data = await response.json();
+    const country = data[0];
+
+    // Extract languages
+    const languages = country.languages
+      ? Object.values(country.languages).join(', ')
+      : 'N/A';
+
+    // Extract currencies
+    const currencies = country.currencies
+      ? Object.values(country.currencies).map((c: any) => `${c.name} (${c.symbol})`).join(', ')
+      : 'N/A';
+
+    // Format population
+    const population = country.population
+      ? country.population >= 1000000
+        ? `${(country.population / 1000000).toFixed(1)} million`
+        : country.population >= 1000
+        ? `${(country.population / 1000).toFixed(0)} thousand`
+        : country.population.toLocaleString()
+      : 'N/A';
+
+    // Format area
+    const area = country.area
+      ? country.area >= 1000000
+        ? `${(country.area / 1000000).toFixed(2)} million km²`
+        : `${country.area.toLocaleString()} km²`
+      : 'N/A';
+
+    // Generate a fun fact
+    const funFacts = [];
+    if (country.landlocked) funFacts.push('This is a landlocked country');
+    if (country.independent === false) funFacts.push('This is a dependent territory');
+    if (country.unMember) funFacts.push('Member of the United Nations');
+    if (country.borders && country.borders.length > 0) {
+      funFacts.push(`Borders ${country.borders.length} ${country.borders.length === 1 ? 'country' : 'countries'}`);
+    }
+    if (country.timezones && country.timezones.length > 1) {
+      funFacts.push(`Has ${country.timezones.length} time zones`);
+    }
+
+    const funFact = funFacts.length > 0
+      ? funFacts[Math.floor(Math.random() * funFacts.length)]
+      : `Capital city is ${country.capital?.[0] || 'not specified'}`;
+
+    return {
+      name: country.name.common,
+      capital: country.capital?.[0] || 'N/A',
+      region: country.region || 'Unknown',
+      subregion: country.subregion || 'Unknown',
+      population,
+      area,
+      languages,
+      currencies,
+      funFact,
+    };
+  } catch (error) {
+    console.error(`Error fetching country info for ${countryCode}:`, error);
+    return null;
+  }
+};
