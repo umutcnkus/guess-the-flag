@@ -316,7 +316,7 @@ function App() {
           bestStreak,
         }}
       />
-      <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
+      <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', padding: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
         <Row justify="center" align="middle">
           <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
             <Space style={{width: '100%'}} direction="vertical">
