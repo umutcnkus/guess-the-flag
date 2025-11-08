@@ -10,6 +10,7 @@ export interface GameStats {
 }
 
 const STORAGE_KEY = 'flag-game-stats';
+const THEME_KEY = 'flag-game-theme';
 
 export const saveStats = (stats: GameStats): void => {
   try {
@@ -46,4 +47,25 @@ export const resetStats = (): void => {
   } catch (error) {
     console.error('Error resetting stats:', error);
   }
+};
+
+// Theme management
+export const saveTheme = (isDark: boolean): void => {
+  try {
+    localStorage.setItem(THEME_KEY, JSON.stringify(isDark));
+  } catch (error) {
+    console.error('Error saving theme:', error);
+  }
+};
+
+export const loadTheme = (): boolean => {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored !== null) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading theme:', error);
+  }
+  return false; // Default to light mode
 };

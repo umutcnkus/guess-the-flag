@@ -1,12 +1,12 @@
-import {ArrowRightOutlined} from '@ant-design/icons';
-import {Button, Col, Row} from 'antd';
+import {ArrowRightOutlined, BulbOutlined, BulbFilled} from '@ant-design/icons';
+import {Button, Col, Row, ConfigProvider, theme, Space} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
 import './App.css';
 import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
 import Stats from './Stats/Stats';
-import {loadStats, saveStats} from './utils/storage';
+import {loadStats, saveStats, loadTheme, saveTheme} from './utils/storage';
 
 function getMultipleRandom(arr: any[], num: number) {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -35,6 +35,9 @@ function shuffle(array: any) {
 function App() {
   countries.registerLocale(require("i18n-iso-countries/langs/en.json"));
 
+  // Dark mode state
+  const [isDark, setIsDark] = useState(loadTheme());
+
   const getCountries = () => {
     const countryObject = countries.getNames("en", {select: "official"});
     const countryNames = Object.keys(countryObject);
@@ -45,6 +48,12 @@ function App() {
     setRandomCountries(getCountries());
     setOrder(getMultipleRandom([0, 1, 2, 3], 4));
   }
+
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    saveTheme(newTheme);
+  };
 
   // Load stats from localStorage on mount
   const initialStats = loadStats();
@@ -86,20 +95,35 @@ function App() {
   const [order, setOrder] = useState(getMultipleRandom([0, 1, 2, 3], 4));
 
   return (
-    <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem'}}>
-      <Row justify="center" align="middle">
-        <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <Button
-            type="primary"
-            icon={<ArrowRightOutlined />}
-            onClick={() => onNext()}
-            size="large"
-            style={{width: '100%'}}
-          >
-            Next
-          </Button>
-        </Col>
-      </Row>
+    <ConfigProvider
+      theme={{
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      }}
+    >
+      <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
+        <Row justify="center" align="middle">
+          <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
+            <Space style={{width: '100%'}} direction="vertical">
+              <Button
+                icon={isDark ? <BulbFilled /> : <BulbOutlined />}
+                onClick={toggleTheme}
+                size="large"
+                style={{width: '100%'}}
+              >
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </Button>
+              <Button
+                type="primary"
+                icon={<ArrowRightOutlined />}
+                onClick={() => onNext()}
+                size="large"
+                style={{width: '100%'}}
+              >
+                Next
+              </Button>
+            </Space>
+          </Col>
+        </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
           <Flag countries={randomCountries} order={order} />
@@ -115,7 +139,8 @@ function App() {
           <Selections countries={randomCountries} order={order} onSelect={changeStats} />
         </Col>
       </Row>
-    </div>
+      </div>
+    </ConfigProvider>
   );
 }
 
