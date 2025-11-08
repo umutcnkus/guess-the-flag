@@ -2,6 +2,8 @@ import {ArrowRightOutlined, BulbOutlined, BulbFilled, TrophyOutlined} from '@ant
 import {Button, Col, Row, ConfigProvider, theme, Space, Select, Tag} from 'antd';
 import * as countries from 'i18n-iso-countries';
 import {useState, useEffect} from 'react';
+import Confetti from 'react-confetti';
+import {motion} from 'framer-motion';
 import './App.css';
 import Flag from './Flag/Flag';
 import Selections from './Selections/Selections';
@@ -83,6 +85,24 @@ function App() {
   const [currentStreak, setCurrentStreak] = useState(initialStats.currentStreak);
   const [bestStreak, setBestStreak] = useState(initialStats.bestStreak);
 
+  // Confetti state
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Save stats to localStorage whenever they change
   useEffect(() => {
     saveStats({
@@ -108,6 +128,11 @@ function App() {
         if (newStreak > bestStreak) {
           setBestStreak(newStreak);
         }
+        // Show confetti for streaks of 3, 5, 10, and every 10 after that
+        if (newStreak === 3 || newStreak === 5 || newStreak % 10 === 0) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+        }
         break;
     }
   }
@@ -121,6 +146,15 @@ function App() {
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
       }}
     >
+      {showConfetti && (
+        <Confetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={500}
+          gravity={0.3}
+        />
+      )}
       <div className="App" style={{display: 'flex', gap: '1rem', flexDirection: 'column', margin: '1rem', minHeight: '100vh', backgroundColor: isDark ? '#141414' : '#ffffff'}}>
         <Row justify="center" align="middle">
           <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
@@ -172,7 +206,13 @@ function App() {
       </Row>
       <Row justify="center" align="middle">
         <Col xs={{span: 20}} md={{span: 10}} lg={{span: 6}}>
-          <Stats countries={randomCountries} fails={fails} success={success} currentStreak={currentStreak} bestStreak={bestStreak}/>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Stats countries={randomCountries} fails={fails} success={success} currentStreak={currentStreak} bestStreak={bestStreak}/>
+          </motion.div>
         </Col>
       </Row>
       <Row justify="center" align="middle">
